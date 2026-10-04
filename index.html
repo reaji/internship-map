@@ -870,6 +870,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <div id="map">
   <button class="toggle glass" id="toggle" title="Show or hide the site list"><span style="font-size:17px">‹</span> Hide</button>
   <div class="jump glass">
+    <button data-v="me">📍 Near me</button>
     <button data-v="all" class="on">All</button>
     <button data-v="ca">California</button>
     <button data-v="bay">Bay Area</button>
@@ -878,6 +879,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   </div>
   <label class="region glass" id="regionPill"><span id="regionLabel">All regions</span><span style="font-size:12px">▾</span>
     <select id="regionSel" aria-label="Jump to region">
+      <option value="me">📍 Near me</option>
       <option value="all">All regions</option>
       <option value="ca">California</option>
       <option value="bay">Bay Area</option>
@@ -1086,7 +1088,23 @@ function openSite(id) {
 function vis() { const r = map.getContainer().getBoundingClientRect(); return { top: Math.max(0, -r.top), bottom: Math.max(0, r.bottom - innerHeight), h: r.height }; }
 function pad() { const open = !document.body.classList.contains('collapsed') && innerWidth > 760, v = vis(); return { paddingTopLeft: [open ? 430 : 40, 80 + v.top], paddingBottomRight: [40, 40 + v.bottom] }; }
 function popupPad() { const v = vis(); Object.values(markers).forEach(mk => { const pp = mk.getPopup(); if (pp) { pp.options.autoPanPaddingTopLeft = L.point(!document.body.classList.contains('collapsed') && innerWidth > 760 ? 424 : 20, 70 + v.top); pp.options.autoPanPaddingBottomRight = L.point(20, 20 + v.bottom); } }); }
+let userLL = null, userDot = null;
+function setRegionUI(v) {
+  regionSel.value = v; document.getElementById('regionLabel').textContent = regionSel.options[regionSel.selectedIndex].text;
+  document.querySelectorAll('.jump button').forEach(x => x.classList.toggle('on', x.dataset.v === v));
+}
+function locate(auto) {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(p => {
+    userLL = L.latLng(p.coords.latitude, p.coords.longitude);
+    if (!userDot) userDot = L.circleMarker(userLL, { radius: 8, color: '#fff', weight: 3, fillColor: '#007AFF', fillOpacity: 1, interactive: false }).addTo(map);
+    else userDot.setLatLng(userLL);
+    if (auto && regionSel.value !== 'all') return;
+    setRegionUI('me'); map.fitBounds(userLL.toBounds(50000), pad());
+  }, () => { if (!auto) { setRegionUI('all'); fit('all'); alert('Location is turned off for this page, so showing all sites.'); } }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
+}
 function fit(v) {
+  if (v === 'me') return userLL ? map.fitBounds(userLL.toBounds(50000), pad()) : locate(false);
   if (VIEWS[v]) return map.fitBounds(VIEWS[v], pad());
   const pts = visible().filter(s => s.lat).map(s => [s.lat, s.lng]);
   map.fitBounds(pts.length ? pts : [[20, -160], [45, -70]], pad());
@@ -1112,6 +1130,9 @@ window.addEventListener('scroll', pin);
 window.addEventListener('resize', () => { if (innerWidth > 760) document.getElementById('side').style.display = ''; pin(); map.invalidateSize(); popupPad(); });
 requestAnimationFrame(() => { pin(); map.invalidateSize(); popupPad(); if (innerWidth <= 760) fit(regionSel.value); });
 setTimeout(pin, 300);
+regionSel.value = 'all';
+let userMoved = false; map.on('dragstart zoomstart', e => { if (e.hard !== false) userMoved = true; });
+setTimeout(() => locate(true), 400);
 L.DomEvent.disableClickPropagation(toggleBtn);
 L.DomEvent.disableClickPropagation(document.getElementById("regionPill"));
 if (window.innerWidth < 760) setCollapsed(true);
