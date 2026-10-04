@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="theme-color" content="#F2EFE9">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#F2F2F7">
@@ -731,6 +732,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .jump button { border: 0; background: transparent; padding: 6px 11px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--label); }
   .jump button:hover { background: var(--fill); }
   .jump button.on { background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.12); font-weight: 600; }
+  .region { display: none; position: absolute; z-index: 700; top: calc(12px + env(safe-area-inset-top)); right: 12px; align-items: center; gap: 6px; padding: 11px 16px; border-radius: 999px; font-size: 16px; font-weight: 600; color: var(--blue, #007AFF); }
+  .region select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; border: 0; -webkit-appearance: none; appearance: none; }
   .legend { position: absolute; bottom: 26px; right: 12px; z-index: 500; padding: 10px 14px; border-radius: 14px; font-size: 13px; display: grid; gap: 5px; }
   .legend div { display: flex; align-items: center; gap: 8px; }
   .leaflet-top.leaflet-left { top: 56px; }
@@ -818,8 +821,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
   @media (max-width: 760px) {
     .toggle { top: calc(12px + env(safe-area-inset-top)); left: 12px !important; }
     .jump { top: calc(12px + env(safe-area-inset-top)) !important; left: auto !important; right: 12px; max-width: calc(100vw - 132px); overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-    .jump::-webkit-scrollbar { display: none; }
-    .jump button { white-space: nowrap; padding: 8px 12px; flex: none; }
+    .jump { display: none !important; }
+    .region { display: flex !important; }
+    html, body { background: #F2EFE9; }
+    #map { top: 0 !important; bottom: auto !important; height: 100lvh !important; min-height: 100%; }
     .leaflet-control-zoom { display: none; }
     #side { left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); height: 66%; border-radius: 30px; }
     header { padding: 16px 16px 6px; } h1 { font-size: 26px; }
@@ -858,6 +863,15 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <button data-v="hi">Hawaii</button>
     <button data-v="ny">New York</button>
   </div>
+  <label class="region glass" id="regionPill"><span id="regionLabel">All regions</span><span style="font-size:12px">▾</span>
+    <select id="regionSel" aria-label="Jump to region">
+      <option value="all">All regions</option>
+      <option value="ca">California</option>
+      <option value="bay">Bay Area</option>
+      <option value="hi">Hawaii</option>
+      <option value="ny">New York</option>
+    </select>
+  </label>
   <div class="legend glass">
     <div><span class="dot" style="background:var(--top)"></span>Top choice</div>
     <div><span class="dot" style="background:var(--medium)"></span>Medium choice</div>
@@ -1004,6 +1018,11 @@ const pf = document.getElementById('prefFilters');
 document.getElementById('sort').onchange = e => { state.sort = e.target.value; render(); };
 document.getElementById('q').oninput = e => { state.q = e.target.value.toLowerCase(); render(); };
 document.querySelectorAll('.jump button').forEach(b => b.onclick = () => { document.querySelectorAll('.jump button').forEach(x => x.classList.toggle('on', x === b)); fit(b.dataset.v); });
+const regionSel = document.getElementById('regionSel');
+regionSel.onchange = () => {
+  document.getElementById('regionLabel').textContent = regionSel.options[regionSel.selectedIndex].text;
+  map.closePopup(); fit(regionSel.value);
+};
 
 function visible() {
   return SITES.filter(s => state.prefs.has(s.preference) && (!state.q ||
@@ -1068,6 +1087,7 @@ function setCollapsed(c) {
 toggleBtn.onclick = e => { L.DomEvent.stopPropagation(e); const c = !document.body.classList.contains('collapsed'); if (!c && innerWidth <= 760) map.closePopup(); setCollapsed(c); };
 window.addEventListener('scroll', () => window.scrollTo(0, 0));
 L.DomEvent.disableClickPropagation(toggleBtn);
+L.DomEvent.disableClickPropagation(document.getElementById("regionPill"));
 if (window.innerWidth < 760) setCollapsed(true);
 </script>
 </body>
