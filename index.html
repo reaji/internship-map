@@ -811,6 +811,23 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .pin { box-shadow: 0 3px 10px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.5); }
   @media (max-width: 900px) { body:not(.collapsed) .jump { top: 72px; } body:not(.collapsed) .leaflet-top.leaflet-left { top: 128px; } }
   @media (max-width: 760px) { .jump { top: 72px; left: 16px; right: auto; } .leaflet-top.leaflet-left { top: 128px !important; } .legend { display: none; } }
+
+  html, body { overflow: hidden; overscroll-behavior: none; }
+  body { position: fixed; inset: 0; height: auto; }
+  #map { position: fixed !important; }
+  @media (max-width: 760px) {
+    .toggle { top: calc(12px + env(safe-area-inset-top)); left: 12px !important; }
+    .jump { top: calc(12px + env(safe-area-inset-top)) !important; left: auto !important; right: 12px; max-width: calc(100vw - 132px); overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .jump::-webkit-scrollbar { display: none; }
+    .jump button { white-space: nowrap; padding: 8px 12px; flex: none; }
+    .leaflet-control-zoom { display: none; }
+    #side { left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); height: 66%; border-radius: 30px; }
+    header { padding: 16px 16px 6px; } h1 { font-size: 26px; }
+    .segmented button { font-size: 12px; gap: 4px; }
+    .leaflet-popup-content { width: calc(100vw - 40px) !important; max-height: 52vh; }
+    .card { padding: 14px 14px 12px; } .card h2 { font-size: 19px; }
+    .grid .v { font-size: 14px; }
+  }
 </style>
 </head>
 <body>
@@ -1019,14 +1036,20 @@ function render() {
 function highlight(id) {
   document.querySelectorAll('.item.active').forEach(e => e.classList.remove('active'));
   const el = document.getElementById('item-' + id);
-  if (el) { el.classList.add('active'); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+  if (el) {
+    el.classList.add('active');
+    const list = document.getElementById('list'), lr = list.getBoundingClientRect(), er = el.getBoundingClientRect();
+    if (er.top < lr.top || er.bottom > lr.bottom) list.scrollTo({ top: list.scrollTop + er.top - lr.top - 40, behavior: 'smooth' });
+  }
 }
 function openSite(id) {
   const m = markers[id]; if (!m) return;
-  const z = Math.max(map.getZoom(), 10), open = !document.body.classList.contains('collapsed') && innerWidth > 760;
+  const phone = innerWidth <= 760;
+  if (phone && !document.body.classList.contains('collapsed')) setCollapsed(true);
+  const z = Math.max(map.getZoom(), 10), open = !document.body.classList.contains('collapsed') && !phone;
   map.once('moveend', () => m.openPopup());
   setTimeout(() => { if (!m.isPopupOpen()) m.openPopup(); }, 900);
-  map.setView(map.unproject(map.project(m.getLatLng(), z).subtract([open ? 200 : 0, 180]), z), z, { animate: true }); highlight(id);
+  map.setView(map.unproject(map.project(m.getLatLng(), z).subtract([open ? 200 : 0, phone ? Math.round(innerHeight * .3) : 180]), z), z, { animate: true }); highlight(id);
 }
 function pad() { const open = !document.body.classList.contains('collapsed') && innerWidth > 760; return { paddingTopLeft: [open ? 430 : 40, 80], paddingBottomRight: [40, 40] }; }
 function fit(v) {
@@ -1042,7 +1065,8 @@ function setCollapsed(c) {
   setTimeout(() => map.invalidateSize(), 260);
   Object.values(markers).forEach(mk => { const pp = mk.getPopup(); if (pp) pp.options.autoPanPaddingTopLeft = L.point(!c && innerWidth > 760 ? 424 : 20, 70); });
 }
-toggleBtn.onclick = e => { L.DomEvent.stopPropagation(e); setCollapsed(!document.body.classList.contains('collapsed')); };
+toggleBtn.onclick = e => { L.DomEvent.stopPropagation(e); const c = !document.body.classList.contains('collapsed'); if (!c && innerWidth <= 760) map.closePopup(); setCollapsed(c); };
+window.addEventListener('scroll', () => window.scrollTo(0, 0));
 L.DomEvent.disableClickPropagation(toggleBtn);
 if (window.innerWidth < 760) setCollapsed(true);
 </script>
