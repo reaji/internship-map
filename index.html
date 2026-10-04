@@ -821,7 +821,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   body { position: fixed; inset: 0; height: auto; }
   #map { position: fixed !important; }
   @media (max-width: 760px) {
-    :root { --tb: 80px; --bb: 140px; }
+    :root { --tb: 80px; --bb:220px; }
     .toggle { top: calc(12px + env(safe-area-inset-top)); left: 12px !important; }
     .jump { top: calc(12px + env(safe-area-inset-top)) !important; left: auto !important; right: 12px; max-width: calc(100vw - 132px); overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
     .jump { display: none !important; }
@@ -1092,7 +1092,13 @@ function fit(v) {
 }
 render(); fit('all');
 const toggleBtn = document.getElementById('toggle');
+let hideT;
 function setCollapsed(c) {
+  const side = document.getElementById('side'), phone = innerWidth <= 760;
+  clearTimeout(hideT);
+  if (!c) { side.style.display = ''; void side.offsetHeight; }
+  else if (phone) hideT = setTimeout(() => { if (document.body.classList.contains('collapsed')) side.style.display = 'none'; }, 550);
+  if (!phone) side.style.display = '';
   document.body.classList.toggle('collapsed', c);
   toggleBtn.innerHTML = c ? '<span style="font-size:16px">☰</span> Sites' : '<span style="font-size:17px">‹</span> Hide';
   setTimeout(() => map.invalidateSize(), 260);
@@ -1102,7 +1108,7 @@ toggleBtn.onclick = e => { L.DomEvent.stopPropagation(e); const c = !document.bo
 const runway = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tb')) || 0;
 const pin = () => { if (Math.abs(scrollY - runway()) > 0.5 || scrollX) window.scrollTo(0, runway()); };
 window.addEventListener('scroll', pin);
-window.addEventListener('resize', () => { pin(); map.invalidateSize(); popupPad(); });
+window.addEventListener('resize', () => { if (innerWidth > 760) document.getElementById('side').style.display = ''; pin(); map.invalidateSize(); popupPad(); });
 requestAnimationFrame(() => { pin(); map.invalidateSize(); popupPad(); if (innerWidth <= 760) fit(regionSel.value); });
 setTimeout(pin, 300);
 L.DomEvent.disableClickPropagation(toggleBtn);
